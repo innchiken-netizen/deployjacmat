@@ -151,30 +151,44 @@
 
   <main>
     <!-- =====================================================================
-         1. EDITORIAL HERO — LOVABLE & SHOPIFY FLAGSHIP AESTHETIC
+         1. EDITORIAL HERO — FULLSCREEN IMMERSIVE LUXURY STREETWEAR
          ===================================================================== -->
-    <section class="editorial-hero">
-      <div class="editorial-hero-glow" aria-hidden="true"></div>
-      <div class="editorial-hero-container">
+    <section class="fullscreen-hero" id="hero">
+      <!-- Fullscreen Background Photography -->
+      <div class="fullscreen-hero-bg">
+        <img 
+          src="/hero-image.jpg" 
+          alt="JACMAT STORE — Lookbook Fly Girls Wear JACMAT" 
+          class="fullscreen-hero-img" 
+          width="1920" 
+          height="1080" 
+          fetchpriority="high"
+        >
+        <!-- Dual Cinematic Gradient Overlays: Dark Left Vignette for Text Legibility + Bottom Shadow for Grounding -->
+        <div class="fullscreen-hero-overlay" aria-hidden="true"></div>
+      </div>
+
+      <!-- Main Content Container Overlaid on the Fullscreen Visual -->
+      <div class="fullscreen-hero-container">
         
-        <!-- Left Column: Human Storytelling & Magnetic Actions -->
-        <div class="editorial-hero-copy">
-          <div class="editorial-pill-tag">
+        <!-- Left Column: High-Impact Human Storytelling & Magnetic Actions -->
+        <div class="fullscreen-hero-copy">
+          <div class="fullscreen-pill-tag">
             <span class="indicator-online"></span>
             <span>Édition Limitée &bull; Kinshasa &amp; International</span>
           </div>
 
-          <h1 class="editorial-hero-title">
+          <h1 class="fullscreen-hero-title">
             L'allure urbaine,<br>
             née d'un lien <em class="serif-italic">familial.</em>
           </h1>
 
-          <p class="editorial-hero-lead">
-            Née de l'union de <strong>Jacky &amp; Matthieu</strong>, Jacmat façonne un vestiaire streetwear sincère, aux coupes franches et aux matières denses — pensé pour celles et ceux qui portent leur propre histoire.
+          <p class="fullscreen-hero-lead">
+            Née de l'union de <strong>Jacky &amp; Matthieu</strong>, Jacmat façonne un vestiaire streetwear sincère aux coupes franches et aux matières denses — pensé pour celles et ceux qui portent leur propre histoire.
           </p>
 
-          <div class="editorial-hero-ctas">
-            <a href="/shop" class="btn-editorial-primary">
+          <div class="fullscreen-hero-ctas">
+            <a href="/shop" class="btn-fullscreen-primary">
               <span>Explorer le Drop</span>
               <span class="btn-arrow-circle" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -184,63 +198,55 @@
               </span>
             </a>
 
-            <a href="https://api.whatsapp.com/send?phone=243823207915&text=Bonjour%20Jacmat%20Store%2C%20je%20souhaite%20d%C3%A9couvrir%20vos%20pi%C3%A8ces%20disponibles" target="_blank" rel="noopener noreferrer" class="btn-editorial-outline">
+            <a href="https://api.whatsapp.com/send?phone=243823207915&text=Bonjour%20Jacmat%20Store%2C%20je%20souhaite%20d%C3%A9couvrir%20vos%20pi%C3%A8ces%20disponibles" target="_blank" rel="noopener noreferrer" class="btn-fullscreen-outline">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color: #25d366;">
                 <path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.979-.276-.1-.476-.15-.677.15-.2.3-.777.979-.953 1.18-.175.2-.351.225-.652.075-.3-.15-1.267-.467-2.413-1.488-.893-.795-1.496-1.777-1.672-2.078-.175-.3-.019-.462.131-.611.136-.134.301-.35.452-.525.15-.175.2-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.677-1.632-.928-2.235-.245-.589-.494-.509-.677-.518-.175-.009-.376-.009-.577-.009-.2 0-.527.075-.802.375-.276.3-1.054 1.03-1.054 2.511s1.079 2.912 1.23 3.113c.15.2 2.122 3.24 5.14 4.544.718.31 1.278.495 1.716.634.72.229 1.375.197 1.894.12.578-.087 1.78-.727 2.031-1.428.251-.702.251-1.303.175-1.428-.075-.125-.275-.2-.576-.35z"/>
               </svg>
               <span>Conciergerie WhatsApp</span>
             </a>
           </div>
-
-          <!-- Editorial Metrics & Social Proof Strip -->
-          <div class="editorial-hero-metrics">
-            <div class="hero-metric-item">
-              <span class="hero-metric-value">100%</span>
-              <span class="hero-metric-label">Coton dense &amp; finitions certifiées</span>
-            </div>
-            <div class="hero-metric-divider" aria-hidden="true"></div>
-            <div class="hero-metric-item">
-              <span class="hero-metric-value">24–48h</span>
-              <span class="hero-metric-label">Livraison Kinshasa &amp; expédition Monde</span>
-            </div>
-            <div class="hero-metric-divider" aria-hidden="true"></div>
-            <div class="hero-metric-item">
-              <span class="hero-metric-value">Édition</span>
-              <span class="hero-metric-label">Drops exclusifs en séries limitées</span>
-            </div>
-          </div>
         </div>
 
-        <!-- Right Column: Asymmetric Lookbook Collage + "Shop the Look" Hotspot -->
-        <div class="editorial-hero-visual">
-          <div class="lookbook-stage">
-            <!-- Main Portrait Lookbook Frame -->
-            <div class="lookbook-main-frame">
-              <span class="lookbook-season-chip">LOOKBOOK &bull; SAISON 2026</span>
-              <img src="/hero-image.jpg" alt="Lookbook Jacmat Store — Fly Girls Wear JACMAT" class="lookbook-main-img" width="800" height="1000" fetchpriority="high">
-              
-              <!-- Interactive Shop-The-Look Floating Glass Pill -->
-              <a href="/product?p=for-the-10s-only" class="shop-the-look-pill" aria-label="Découvrir le t-shirt FOR THE 10s ONLY">
-                <img src="/images/for the 10s.jpg" alt="FOR THE 10s ONLY" class="stl-thumb" width="48" height="48">
-                <div class="stl-info">
-                  <span class="stl-eyebrow">Pièce portée sur le look</span>
-                  <span class="stl-title">FOR THE 10s ONLY — 30$</span>
-                </div>
-                <span class="stl-action" aria-hidden="true">Voir &rarr;</span>
-              </a>
+        <!-- Right Side: Interactive "Shop the Look" Floating Card Docked to Model -->
+        <div class="fullscreen-hero-floating-card">
+          <a href="/product?p=for-the-10s-only" class="shop-the-look-glass-card" aria-label="Découvrir le t-shirt FOR THE 10s ONLY">
+            <span class="stl-ping-dot" aria-hidden="true"></span>
+            <img src="/images/for the 10s.jpg" alt="FOR THE 10s ONLY" class="stl-thumb" width="52" height="52">
+            <div class="stl-info">
+              <span class="stl-eyebrow">Pièce portée à l'écran</span>
+              <span class="stl-title">FOR THE 10s ONLY &bull; 30$</span>
             </div>
-
-            <!-- Floating Secondary Editorial Card (Desktop & Tablet) -->
-            <a href="/product?p=the-collection-1on1" class="lookbook-floating-card" aria-label="Découvrir The Collection 1on1">
-              <img src="/images/1on1_0005_1on1.jpg" alt="The Collection 1on1" loading="lazy">
-              <div class="lookbook-floating-caption">
-                <span>Collection 1on1</span>
-                <strong>30$</strong>
-              </div>
-            </a>
-          </div>
+            <span class="stl-action" aria-hidden="true">Voir &rarr;</span>
+          </a>
         </div>
 
+      </div>
+
+      <!-- Bottom Anchored Reassurance & Discovery Dock -->
+      <div class="fullscreen-hero-bottom-dock">
+        <div class="fullscreen-dock-inner">
+          <div class="dock-metric-item">
+            <span class="dock-metric-val">100% COTON</span>
+            <span class="dock-metric-lbl">Coupes denses &amp; certifiées</span>
+          </div>
+          <div class="dock-metric-divider" aria-hidden="true"></div>
+          <div class="dock-metric-item">
+            <span class="dock-metric-val">24–48H</span>
+            <span class="dock-metric-lbl">Kinshasa &amp; expédition Monde</span>
+          </div>
+          <div class="dock-metric-divider" aria-hidden="true"></div>
+          <div class="dock-metric-item">
+            <span class="dock-metric-val">DROPS LIMITÉS</span>
+            <span class="dock-metric-lbl">Séries numérotées exclusives</span>
+          </div>
+          <div class="dock-metric-divider desktop-only" aria-hidden="true"></div>
+          <a href="#collections" class="dock-scroll-link desktop-only" aria-label="Défiler vers les collections">
+            <span>Explorer</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </a>
+        </div>
       </div>
     </section>
 
