@@ -1,4 +1,4 @@
-import { fetchProducts, formatPrice, getEffectivePrice, hasProductVariants, getProductCategoryLabel, slugify } from "../api.js";
+import { fetchProducts, formatPrice, getEffectivePrice, hasProductVariants, getProductCategory, getProductCategoryLabel, slugify } from "../api.js";
 import { cartState } from "../state.js";
 import { openVariantModal } from "../components/variant-modal.js";
 import { showToast } from "../components/toast.js";
@@ -6,10 +6,35 @@ import { openCartDrawer } from "../components/cart-drawer.js";
 import { CONFIG } from "../config.js";
 import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
+let allPublishedProducts = [];
+let activeHomeFilter = "all";
+
 export async function initHomePage() {
   setupIntersectionObserver();
   setupMarketingPopup();
+  setupHomeCategoryTabs();
   await loadFeaturedDrops();
+}
+
+function setupHomeCategoryTabs() {
+  const tabsContainer = document.getElementById("home-category-tabs");
+  if (!tabsContainer) return;
+
+  tabsContainer.querySelectorAll(".home-filter-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const filterVal = pill.dataset.filter || "all";
+      if (filterVal === activeHomeFilter) return;
+      activeHomeFilter = filterVal;
+
+      tabsContainer.querySelectorAll(".home-filter-pill").forEach((btn) => {
+        const isCurrent = btn === pill;
+        btn.classList.toggle("is-active", isCurrent);
+        btn.setAttribute("aria-selected", isCurrent ? "true" : "false");
+      });
+
+      renderFeaturedDrops();
+    });
+  });
 }
 
 async function loadFeaturedDrops() {
@@ -22,31 +47,42 @@ async function loadFeaturedDrops() {
     return;
   }
 
-  // Curate top featured products (SS80, 1on1, NO CAP, FOR THE 10s, SLIPPERS, Winter Blazer)
-  const featuredNames = [
-    "SS80",
-    "The collection : 1on1",
-    "NO CAP",
-    "FOR THE 10s ONLY",
-    "SLIPPERS VPMLM",
-    "Take Over the World",
-    "Winter Blazer",
-    "JIC"
-  ];
-
   const publishedOnly = products.filter((p) => !p.status || p.status === "published");
   const seenIds = new Set();
-  const topFeatured = [];
+  allPublishedProducts = [];
   publishedOnly.forEach((p) => {
     const id = p.id || p.slug || p.name;
     if (!seenIds.has(id)) {
       seenIds.add(id);
-      topFeatured.push(p);
+      allPublishedProducts.push(p);
     }
   });
 
-  container.innerHTML = topFeatured
-    .slice(0, 8)
+  renderFeaturedDrops();
+}
+
+function renderFeaturedDrops() {
+  const container = document.getElementById("featured-drops-container");
+  if (!container) return;
+
+  const filtered = allPublishedProducts.filter((product) => {
+    if (activeHomeFilter === "all") return true;
+    const cat = getProductCategory(product);
+    return cat === activeHomeFilter;
+  });
+
+  const displayList = filtered.slice(0, 8);
+
+  if (displayList.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 48px 20px; color: var(--color-muted);">
+        Aucune pièce disponible dans cet univers pour le moment.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = displayList
     .map((product) => {
       const primaryImg = sanitizeImageUrl(product.images?.[0]);
       const secondaryImg = sanitizeImageUrl(product.images?.[1] || primaryImg);
@@ -58,24 +94,39 @@ async function loadFeaturedDrops() {
       const hasSale = effectivePrice < Number(product.price);
       const needsVariantModal = hasProductVariants(product);
 
+      const sizesList =
+        product.variants && Array.isArray(product.variants.Taille) && product.variants.Taille.length > 0
+          ? product.variants.Taille.slice(0, 5).map(escapeHtml).join(" · ")
+          : "";
+
       let badgeHtml = "";
       if (product.soldOut) {
-        badgeHtml = `<span class="badge badge-soldout">Sold Out</span>`;
+        badgeHtml = `<span class="badge badge-soldout">Épuisé</span>`;
+      } else if (hasSale) {
+        badgeHtml = `<span class="badge badge-drop" style="background:#b91c1c;">Offre</span>`;
       } else if (product.preOrder) {
-        badgeHtml = `<span class="badge badge-preorder">Pre-Order</span>`;
+        badgeHtml = `<span class="badge badge-preorder">Pré-commande</span>`;
       } else {
-        badgeHtml = `<span class="badge badge-drop">Drop</span>`;
+        badgeHtml = `<span class="badge badge-drop">Nouveau Drop</span>`;
       }
 
       const priceHtml = hasSale
-        ? `<span class="product-price"><del style="opacity:0.5;font-size:0.85em;margin-right:4px;">${formatPrice(product.price)}$</del>${formatPrice(effectivePrice)}$</span>`
+        ? `<span class="product-price"><del style="opacity:0.45;font-size:0.84em;margin-right:6px;font-weight:500;">${formatPrice(product.price)}$</del>${formatPrice(effectivePrice)}$</span>`
         : `<span class="product-price">${formatPrice(effectivePrice)}$</span>`;
 
+      const quickActionMarkup = product.soldOut
+        ? ""
+        : `
+          <button type="button" class="editorial-quick-add quick-add-btn" data-product-id="${escapeHtml(product.id || product.slug || product.name)}" aria-label="Ajouter ${safeName}">
+            <span>${needsVariantModal ? "+ Choisir la taille" : "+ Ajout rapide"}</span>
+          </button>
+        `;
+
       return `
-        <article class="product-card reveal ${product.soldOut ? "is-sold-out" : ""}" data-product-id="${slug}">
-          <div class="product-media">
+        <article class="product-card editorial-product-card reveal ${product.soldOut ? "is-sold-out" : ""}" data-product-id="${slug}">
+          <div class="product-media editorial-product-media">
             <div class="product-badges">${badgeHtml}</div>
-            <a href="/product?p=${encodeURIComponent(product.slug || slugify(product.name))}" aria-label="Voir ${safeName}">
+            <a href="/product?p=${encodeURIComponent(product.slug || slugify(product.name))}" aria-label="Voir ${safeName}" class="product-media-link">
               <img src="${primaryImg}" alt="${safeName}" class="product-img img-primary" loading="lazy">
               ${
                 hasSecondary
@@ -83,24 +134,26 @@ async function loadFeaturedDrops() {
                   : `<img src="${primaryImg}" alt="${safeName}" class="product-img no-secondary" loading="lazy">`
               }
             </a>
+            ${quickActionMarkup}
           </div>
-          <div class="product-content">
-            <div>
-              <div class="product-category-tag">${safeCategory}</div>
+          <div class="product-content editorial-product-meta">
+            <div class="editorial-meta-top">
+              <span class="product-category-tag">${safeCategory}</span>
+              ${sizesList ? `<span class="editorial-sizes-hint">${sizesList}</span>` : ""}
+            </div>
+            <div class="editorial-meta-main">
               <h3 class="product-title">
                 <a href="/product?p=${encodeURIComponent(product.slug || slugify(product.name))}">${safeName}</a>
               </h3>
-            </div>
-            <div class="product-bottom-row">
               ${priceHtml}
-              ${
-                product.soldOut
-                  ? `<span class="badge badge-soldout">Épuisé</span>`
-                  : `<button type="button" class="product-quick-btn quick-add-btn" data-product-id="${escapeHtml(product.id || product.slug || product.name)}">
-                      ${needsVariantModal ? "Options" : "Ajouter"}
-                    </button>`
-              }
             </div>
+            ${
+              product.soldOut
+                ? ""
+                : `<button type="button" class="editorial-mobile-add-btn quick-add-btn" data-product-id="${escapeHtml(product.id || product.slug || product.name)}">
+                    ${needsVariantModal ? "Choisir la taille" : "Ajouter au panier"}
+                  </button>`
+            }
           </div>
         </article>
       `;
@@ -109,9 +162,13 @@ async function loadFeaturedDrops() {
 
   // Attach quick-add event listeners
   container.querySelectorAll(".quick-add-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const targetId = btn.dataset.productId;
-      const product = products.find((p) => (p.id || p.slug || p.name) === targetId || p.name === targetId);
+      const product = allPublishedProducts.find(
+        (p) => (p.id || p.slug || p.name) === targetId || p.name === targetId
+      );
       if (!product) return;
 
       if (hasProductVariants(product)) {
@@ -141,7 +198,7 @@ function setupIntersectionObserver() {
         }
       });
     },
-    { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+    { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
   );
 
   elements.forEach((el) => observer.observe(el));
