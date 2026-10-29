@@ -1,9 +1,10 @@
-import { fetchProducts, formatPrice, getProductCategoryLabel, slugify } from "../api.js";
+import { fetchProducts, formatPrice, getEffectivePrice, hasProductVariants, getProductCategoryLabel, slugify } from "../api.js";
 import { cartState } from "../state.js";
 import { openVariantModal } from "../components/variant-modal.js";
 import { showToast } from "../components/toast.js";
 import { openCartDrawer } from "../components/cart-drawer.js";
 import { CONFIG } from "../config.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 export async function initHomePage() {
   setupIntersectionObserver();
@@ -47,10 +48,15 @@ async function loadFeaturedDrops() {
   container.innerHTML = topFeatured
     .slice(0, 8)
     .map((product) => {
-      const primaryImg = product.images[0];
-      const secondaryImg = product.images[1] || primaryImg;
-      const hasSecondary = product.images.length > 1;
-      const slug = slugify(product.name);
+      const primaryImg = sanitizeImageUrl(product.images?.[0]);
+      const secondaryImg = sanitizeImageUrl(product.images?.[1] || primaryImg);
+      const hasSecondary = Array.isArray(product.images) && product.images.length > 1;
+      const slug = escapeHtml(product.slug || slugify(product.name));
+      const safeName = escapeHtml(product.name);
+      const safeCategory = escapeHtml(getProductCategoryLabel(product));
+      const effectivePrice = getEffectivePrice(product);
+      const hasSale = effectivePrice < Number(product.price);
+      const needsVariantModal = hasProductVariants(product);
 
       let badgeHtml = "";
       if (product.soldOut) {
@@ -61,33 +67,37 @@ async function loadFeaturedDrops() {
         badgeHtml = `<span class="badge badge-drop">Drop</span>`;
       }
 
+      const priceHtml = hasSale
+        ? `<span class="product-price"><del style="opacity:0.5;font-size:0.85em;margin-right:4px;">${formatPrice(product.price)}$</del>${formatPrice(effectivePrice)}$</span>`
+        : `<span class="product-price">${formatPrice(effectivePrice)}$</span>`;
+
       return `
         <article class="product-card reveal ${product.soldOut ? "is-sold-out" : ""}" data-product-id="${slug}">
           <div class="product-media">
             <div class="product-badges">${badgeHtml}</div>
-            <a href="/product?p=${slug}" aria-label="Voir ${product.name}">
-              <img src="${primaryImg}" alt="${product.name}" class="product-img img-primary" loading="lazy">
+            <a href="/product?p=${encodeURIComponent(product.slug || slugify(product.name))}" aria-label="Voir ${safeName}">
+              <img src="${primaryImg}" alt="${safeName}" class="product-img img-primary" loading="lazy">
               ${
                 hasSecondary
-                  ? `<img src="${secondaryImg}" alt="${product.name} vue alternative" class="product-img img-secondary" loading="lazy">`
-                  : `<img src="${primaryImg}" alt="${product.name}" class="product-img no-secondary" loading="lazy">`
+                  ? `<img src="${secondaryImg}" alt="${safeName} vue alternative" class="product-img img-secondary" loading="lazy">`
+                  : `<img src="${primaryImg}" alt="${safeName}" class="product-img no-secondary" loading="lazy">`
               }
             </a>
           </div>
           <div class="product-content">
             <div>
-              <div class="product-category-tag">${getProductCategoryLabel(product)}</div>
+              <div class="product-category-tag">${safeCategory}</div>
               <h3 class="product-title">
-                <a href="/product?p=${slug}">${product.name}</a>
+                <a href="/product?p=${encodeURIComponent(product.slug || slugify(product.name))}">${safeName}</a>
               </h3>
             </div>
             <div class="product-bottom-row">
-              <span class="product-price">${formatPrice(product.price)}$</span>
+              ${priceHtml}
               ${
                 product.soldOut
                   ? `<span class="badge badge-soldout">Épuisé</span>`
-                  : `<button type="button" class="product-quick-btn quick-add-btn" data-product-name="${product.name}">
-                      ${product.isVariable ? "Options" : "Ajouter"}
+                  : `<button type="button" class="product-quick-btn quick-add-btn" data-product-id="${escapeHtml(product.id || product.slug || product.name)}">
+                      ${needsVariantModal ? "Options" : "Ajouter"}
                     </button>`
               }
             </div>
@@ -100,11 +110,11 @@ async function loadFeaturedDrops() {
   // Attach quick-add event listeners
   container.querySelectorAll(".quick-add-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const name = btn.dataset.productName;
-      const product = products.find((p) => p.name === name);
+      const targetId = btn.dataset.productId;
+      const product = products.find((p) => (p.id || p.slug || p.name) === targetId || p.name === targetId);
       if (!product) return;
 
-      if (product.isVariable) {
+      if (hasProductVariants(product)) {
         openVariantModal(product);
       } else {
         cartState.addToCart(product);
@@ -161,4 +171,9 @@ function setupMarketingPopup() {
   };
 
   closeBtn.addEventListener("click", dismiss);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && popup.classList.contains("is-active")) {
+      dismiss();
+    }
+  });
 }

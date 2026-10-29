@@ -1,8 +1,9 @@
-import { fetchProducts, formatPrice, getProductCategoryLabel, slugify, buildProductWhatsAppUrl } from "../api.js";
+import { fetchProducts, formatPrice, getEffectivePrice, getProductCategoryLabel, slugify, buildProductWhatsAppUrl } from "../api.js";
 import { cartState } from "../state.js";
 import { showToast } from "../components/toast.js";
 import { openCartDrawer } from "../components/cart-drawer.js";
 import { openVariantModal } from "../components/variant-modal.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 export async function initProductPage() {
   const root = document.getElementById("product-detail-root");
@@ -45,6 +46,19 @@ export async function initProductPage() {
     });
   }
 
+  const safeName = escapeHtml(product.name);
+  const safeCategory = escapeHtml(getProductCategoryLabel(product));
+  const safeImages = (Array.isArray(product.images) && product.images.length > 0 ? product.images : ["/logo.png"]).map((img) => sanitizeImageUrl(img));
+  const effectivePrice = getEffectivePrice(product);
+  const hasSale = effectivePrice < Number(product.price);
+  const priceDisplayHtml = hasSale
+    ? `<span class="product-page-price"><del style="opacity:0.45;font-size:0.75em;margin-right:8px;">${formatPrice(product.price)}$</del>${formatPrice(effectivePrice)}$</span>`
+    : `<span class="product-page-price">${formatPrice(effectivePrice)}$</span>`;
+
+  const descHtml = product.description
+    ? `<p style="color: var(--color-muted); font-size: var(--text-base); line-height: 1.65; margin-top: 12px; white-space: pre-line;">${escapeHtml(product.description)}</p>`
+    : "";
+
   // Render Product Page Layout
   root.innerHTML = `
     <nav class="product-breadcrumbs" aria-label="Fil d'Ariane">
@@ -52,20 +66,20 @@ export async function initProductPage() {
       <span>/</span>
       <a href="/shop">Boutique</a>
       <span>/</span>
-      <span>${product.name}</span>
+      <span>${safeName}</span>
     </nav>
 
     <div class="product-detail-grid">
       <!-- Media Gallery Column -->
       <div class="product-gallery-container">
         <div class="product-gallery-main">
-          <img id="gallery-main-img" src="${product.images[0]}" alt="${product.name}" class="gallery-main-img" fetchpriority="high">
+          <img id="gallery-main-img" src="${safeImages[0]}" alt="${safeName}" class="gallery-main-img" fetchpriority="high">
         </div>
         ${
-          product.images.length > 1
+          safeImages.length > 1
             ? `
               <div class="product-gallery-thumbs" role="tablist" aria-label="Galerie de photos">
-                ${product.images
+                ${safeImages
                   .map(
                     (img, idx) => `
                       <button type="button" class="gallery-thumb-btn ${idx === 0 ? "is-active" : ""}" data-index="${idx}" aria-label="Afficher image ${idx + 1}">
@@ -83,10 +97,10 @@ export async function initProductPage() {
       <!-- Info & Purchase Column -->
       <div class="product-info-panel">
         <div class="product-header-block">
-          <span class="section-eyebrow">${getProductCategoryLabel(product)}</span>
-          <h1 class="product-page-title">${product.name}</h1>
+          <span class="section-eyebrow">${safeCategory}${product.sku ? ` &bull; ${escapeHtml(product.sku)}` : ""}</span>
+          <h1 class="product-page-title">${safeName}</h1>
           <div class="product-page-price-row">
-            <span class="product-page-price">${formatPrice(product.price)}$</span>
+            ${priceDisplayHtml}
             ${
               product.soldOut
                 ? `<span class="badge badge-soldout">Épuisé</span>`
@@ -95,6 +109,7 @@ export async function initProductPage() {
                 : `<span class="badge badge-drop">Pièce disponible</span>`
             }
           </div>
+          ${descHtml}
         </div>
 
         <!-- Variants Selection -->
@@ -104,18 +119,18 @@ export async function initProductPage() {
               <div class="product-variants-section">
                 ${Object.entries(product.variants)
                   .map(
-                    ([variantName, values]) => `
+                    ([variantName, values], vIdx) => `
                       <div class="variant-control-group">
                         <div class="variant-label-row">
-                          <span>${variantName}</span>
-                          <span class="variant-selected-value" id="val-${variantName}">${selectedVariants[variantName]}</span>
+                          <span>${escapeHtml(variantName)}</span>
+                          <span class="variant-selected-value" data-variant-label="${escapeHtml(variantName)}" id="val-idx-${vIdx}">${escapeHtml(selectedVariants[variantName])}</span>
                         </div>
-                        <div class="variant-chips-container" data-variant-name="${variantName}">
-                          ${values
+                        <div class="variant-chips-container" data-variant-name="${escapeHtml(variantName)}" data-variant-idx="${vIdx}">
+                          ${(Array.isArray(values) ? values : [])
                             .map(
                               (val) => `
-                                <button type="button" class="variant-chip ${selectedVariants[variantName] === val ? "is-selected" : ""}" data-val="${val}">
-                                  ${val}
+                                <button type="button" class="variant-chip ${selectedVariants[variantName] === val ? "is-selected" : ""}" data-val="${escapeHtml(val)}">
+                                  ${escapeHtml(val)}
                                 </button>
                               `
                             )
@@ -213,7 +228,7 @@ export async function initProductPage() {
     btn.addEventListener("click", () => {
       const idx = Number(btn.dataset.index);
       currentImgIndex = idx;
-      mainImg.src = product.images[idx];
+      mainImg.src = safeImages[idx];
       thumbBtns.forEach((b) => b.classList.remove("is-active"));
       btn.classList.add("is-active");
     });
@@ -235,15 +250,15 @@ export async function initProductPage() {
 
     mainImgContainer.addEventListener("touchend", () => {
       const diff = touchEndX - touchStartX;
-      if (Math.abs(diff) > 40 && product.images.length > 1) {
+      if (Math.abs(diff) > 40 && safeImages.length > 1) {
         if (diff < 0) {
           // Swipe left -> next image
-          currentImgIndex = (currentImgIndex + 1) % product.images.length;
+          currentImgIndex = (currentImgIndex + 1) % safeImages.length;
         } else {
           // Swipe right -> previous image
-          currentImgIndex = (currentImgIndex - 1 + product.images.length) % product.images.length;
+          currentImgIndex = (currentImgIndex - 1 + safeImages.length) % safeImages.length;
         }
-        mainImg.src = product.images[currentImgIndex];
+        mainImg.src = safeImages[currentImgIndex];
         thumbBtns.forEach((b) => b.classList.toggle("is-active", Number(b.dataset.index) === currentImgIndex));
       }
     });
@@ -252,6 +267,7 @@ export async function initProductPage() {
   // Variant chips selection
   root.querySelectorAll(".variant-chips-container").forEach((container) => {
     const variantName = container.dataset.variantName;
+    const variantIdx = container.dataset.variantIdx;
     container.querySelectorAll(".variant-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         container.querySelectorAll(".variant-chip").forEach((c) => c.classList.remove("is-selected"));
@@ -259,7 +275,7 @@ export async function initProductPage() {
         const val = chip.dataset.val;
         selectedVariants[variantName] = val;
 
-        const valLabel = document.getElementById(`val-${variantName}`);
+        const valLabel = document.getElementById(`val-idx-${variantIdx}`);
         if (valLabel) valLabel.textContent = val;
 
         // Update WhatsApp URL
@@ -303,27 +319,31 @@ export async function initProductPage() {
   // Load related products
   if (relatedRoot) {
     const related = products
-      .filter((p) => p.name !== product.name)
+      .filter((p) => p.name !== product.name && p.status !== "draft")
       .slice(0, 4);
 
     relatedRoot.innerHTML = related
       .map((relProduct) => {
-        const relSlug = slugify(relProduct.name);
+        const rawRelSlug = relProduct.slug || slugify(relProduct.name);
+        const safeRelName = escapeHtml(relProduct.name);
+        const safeRelImg = sanitizeImageUrl(relProduct.images?.[0]);
+        const safeRelCat = escapeHtml(getProductCategoryLabel(relProduct));
+        const relPrice = getEffectivePrice(relProduct);
         return `
           <article class="product-card">
             <div class="product-media">
-              <a href="/product?p=${relSlug}">
-                <img src="${relProduct.images[0]}" alt="${relProduct.name}" class="product-img" loading="lazy">
+              <a href="/product?p=${encodeURIComponent(rawRelSlug)}">
+                <img src="${safeRelImg}" alt="${safeRelName}" class="product-img" loading="lazy">
               </a>
             </div>
             <div class="product-content">
               <div>
-                <div class="product-category-tag">${getProductCategoryLabel(relProduct)}</div>
-                <h3 class="product-title"><a href="/product?p=${relSlug}">${relProduct.name}</a></h3>
+                <div class="product-category-tag">${safeRelCat}</div>
+                <h3 class="product-title"><a href="/product?p=${encodeURIComponent(rawRelSlug)}">${safeRelName}</a></h3>
               </div>
               <div class="product-bottom-row">
-                <span class="product-price">${formatPrice(relProduct.price)}$</span>
-                <a href="/product?p=${relSlug}" class="product-quick-btn">Voir</a>
+                <span class="product-price">${formatPrice(relPrice)}$</span>
+                <a href="/product?p=${encodeURIComponent(rawRelSlug)}" class="product-quick-btn">Voir</a>
               </div>
             </div>
           </article>

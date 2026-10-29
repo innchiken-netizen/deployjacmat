@@ -1,8 +1,9 @@
-import { fetchProducts, formatPrice, getProductCategory, getProductCategoryLabel, normalizeText, slugify } from "../api.js";
+import { fetchProducts, formatPrice, getEffectivePrice, hasProductVariants, getProductCategory, getProductCategoryLabel, normalizeText, slugify } from "../api.js";
 import { cartState } from "../state.js";
 import { openVariantModal } from "../components/variant-modal.js";
 import { showToast } from "../components/toast.js";
 import { openCartDrawer } from "../components/cart-drawer.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 export async function initShopPage() {
   const container = document.getElementById("catalog-grid");
@@ -51,10 +52,10 @@ export async function initShopPage() {
   function renderCategoryChips() {
     if (!chipsContainer) return;
     chipsContainer.innerHTML = categories
-      .map(
-        (c) =>
-          `<button type="button" class="filter-chip ${c.id === activeCategory ? "is-active" : ""}" data-category="${c.id}">${c.name}</button>`
-      )
+      .map((c) => {
+        const catId = c.id || c.slug || "";
+        return `<button type="button" class="filter-chip ${catId === activeCategory ? "is-active" : ""}" data-category="${escapeHtml(catId)}">${escapeHtml(c.name)}</button>`;
+      })
       .join("");
 
     chipsContainer.querySelectorAll(".filter-chip").forEach((chip) => {
@@ -81,17 +82,17 @@ export async function initShopPage() {
       if (!query) return matchesCat;
 
       const variantText = product.variants
-        ? Object.entries(product.variants).flatMap(([k, vals]) => [k, ...vals]).join(" ")
+        ? Object.entries(product.variants).flatMap(([k, vals]) => [k, ...(Array.isArray(vals) ? vals : [])]).join(" ")
         : "";
-      const searchTarget = normalizeText(`${product.name} ${product.price} ${variantText}`);
+      const searchTarget = normalizeText(`${product.name} ${getEffectivePrice(product)} ${variantText}`);
       return matchesCat && searchTarget.includes(query);
     });
 
     // Apply sorting
     if (activeSort === "price-asc") {
-      filtered.sort((a, b) => a.price - b.price);
+      filtered.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
     } else if (activeSort === "price-desc") {
-      filtered.sort((a, b) => b.price - a.price);
+      filtered.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
     } else if (activeSort === "name-asc") {
       filtered.sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -102,10 +103,11 @@ export async function initShopPage() {
     }
 
     if (filtered.length === 0) {
+      const safeTerm = escapeHtml(activeSearch || activeCategory);
       container.innerHTML = `
         <div class="catalog-empty-state" style="grid-column: 1/-1;">
           <h3>Aucun produit trouvé</h3>
-          <p>Aucune pièce ne correspond à votre recherche "${activeSearch || activeCategory}".</p>
+          <p>Aucune pièce ne correspond à votre recherche "${safeTerm}".</p>
           <button type="button" class="btn btn-secondary btn-sm" id="reset-filters-btn">Réinitialiser les filtres</button>
         </div>
       `;
@@ -124,10 +126,16 @@ export async function initShopPage() {
 
     container.innerHTML = filtered
       .map((product) => {
-        const primaryImg = product.images[0];
-        const secondaryImg = product.images[1] || primaryImg;
-        const hasSecondary = product.images.length > 1;
-        const slug = slugify(product.name);
+        const primaryImg = sanitizeImageUrl(product.images?.[0]);
+        const secondaryImg = sanitizeImageUrl(product.images?.[1] || primaryImg);
+        const hasSecondary = Array.isArray(product.images) && product.images.length > 1;
+        const rawSlug = product.slug || slugify(product.name);
+        const slug = escapeHtml(rawSlug);
+        const safeName = escapeHtml(product.name);
+        const safeCategory = escapeHtml(getProductCategoryLabel(product));
+        const effectivePrice = getEffectivePrice(product);
+        const hasSale = effectivePrice < Number(product.price);
+        const needsVariantModal = hasProductVariants(product);
 
         let badgeHtml = "";
         if (product.soldOut) {
@@ -138,33 +146,37 @@ export async function initShopPage() {
           badgeHtml = `<span class="badge badge-drop">Drop</span>`;
         }
 
+        const priceHtml = hasSale
+          ? `<span class="product-price"><del style="opacity:0.5;font-size:0.85em;margin-right:4px;">${formatPrice(product.price)}$</del>${formatPrice(effectivePrice)}$</span>`
+          : `<span class="product-price">${formatPrice(effectivePrice)}$</span>`;
+
         return `
           <article class="product-card ${product.soldOut ? "is-sold-out" : ""}" data-product-id="${slug}">
             <div class="product-media">
               <div class="product-badges">${badgeHtml}</div>
-              <a href="/product?p=${slug}" aria-label="Voir ${product.name}">
-                <img src="${primaryImg}" alt="${product.name}" class="product-img img-primary" loading="lazy">
+              <a href="/product?p=${encodeURIComponent(rawSlug)}" aria-label="Voir ${safeName}">
+                <img src="${primaryImg}" alt="${safeName}" class="product-img img-primary" loading="lazy">
                 ${
                   hasSecondary
-                    ? `<img src="${secondaryImg}" alt="${product.name} vue alternative" class="product-img img-secondary" loading="lazy">`
-                    : `<img src="${primaryImg}" alt="${product.name}" class="product-img no-secondary" loading="lazy">`
+                    ? `<img src="${secondaryImg}" alt="${safeName} vue alternative" class="product-img img-secondary" loading="lazy">`
+                    : `<img src="${primaryImg}" alt="${safeName}" class="product-img no-secondary" loading="lazy">`
                 }
               </a>
             </div>
             <div class="product-content">
               <div>
-                <div class="product-category-tag">${getProductCategoryLabel(product)}</div>
+                <div class="product-category-tag">${safeCategory}</div>
                 <h3 class="product-title">
-                  <a href="/product?p=${slug}">${product.name}</a>
+                  <a href="/product?p=${encodeURIComponent(rawSlug)}">${safeName}</a>
                 </h3>
               </div>
               <div class="product-bottom-row">
-                <span class="product-price">${formatPrice(product.price)}$</span>
+                ${priceHtml}
                 ${
                   product.soldOut
                     ? `<span class="badge badge-soldout">Épuisé</span>`
-                    : `<button type="button" class="product-quick-btn quick-add-btn" data-product-name="${product.name}">
-                        ${product.isVariable ? "Options" : "Ajouter"}
+                    : `<button type="button" class="product-quick-btn quick-add-btn" data-product-id="${escapeHtml(product.id || rawSlug)}">
+                        ${needsVariantModal ? "Options" : "Ajouter"}
                       </button>`
                 }
               </div>
@@ -177,11 +189,11 @@ export async function initShopPage() {
     // Quick add event listeners
     container.querySelectorAll(".quick-add-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const name = btn.dataset.productName;
-        const product = products.find((p) => p.name === name);
+        const targetId = btn.dataset.productId;
+        const product = products.find((p) => (p.id || p.slug || slugify(p.name)) === targetId || p.name === targetId);
         if (!product) return;
 
-        if (product.isVariable) {
+        if (hasProductVariants(product)) {
           openVariantModal(product);
         } else {
           cartState.addToCart(product);

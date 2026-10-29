@@ -8,6 +8,7 @@
 
 import { initAdminLayout, showAdminToast } from "./admin-layout.js";
 import { saveCreatedProduct, saveStatusOverride } from "../store-sync.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuthorized = await initAdminLayout("products");
@@ -75,7 +76,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (catRes.ok) {
         const categories = await catRes.json();
         categorySelect.innerHTML = categories
-          .map((c) => `<option value="${c.id || c.slug}">${c.name}</option>`)
+          .map((c) => `<option value="${escapeHtml(c.id || c.slug)}">${escapeHtml(c.name)}</option>`)
           .join("");
         if (selectedId) {
           categorySelect.value = selectedId;
@@ -170,6 +171,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     quickCatModal.addEventListener("click", (e) => {
       if (e.target === quickCatModal) closeCatModal();
     });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && quickCatModal.style.display === "flex") {
+        closeCatModal();
+      }
+    });
   }
 
   if (confirmQuickCatBtn) {
@@ -236,7 +242,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     galleryGrid.innerHTML = galleryImages
       .map((img, idx) => `
         <div class="admin-gallery-thumb-box">
-          <img src="${img}" alt="Aperçu ${idx + 1}">
+          <img src="${sanitizeImageUrl(img)}" alt="Aperçu ${idx + 1}">
           <button type="button" class="admin-gallery-thumb-delete" data-index="${idx}" aria-label="Supprimer photo">✕</button>
           ${idx === 0 ? '<span style="position: absolute; bottom: 4px; left: 4px; background: #000; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 2px;">Principale</span>' : ""}
         </div>
@@ -256,8 +262,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   addImageUrlBtn.addEventListener("click", () => {
     const raw = imageUrlInput.value.trim();
     if (!raw) return;
-    const url = raw.startsWith("/") || raw.startsWith("http") ? raw : `/${raw}`;
-    galleryImages.push(url);
+    const candidate = raw.startsWith("/") || raw.startsWith("http") || raw.startsWith("data:image/") ? raw : `/${raw}`;
+    const safeUrl = sanitizeImageUrl(candidate, "");
+    if (!safeUrl) {
+      showAdminToast("URL d'image invalide ou non autorisée.", "error");
+      return;
+    }
+    galleryImages.push(safeUrl);
     imageUrlInput.value = "";
     renderGallery();
   });

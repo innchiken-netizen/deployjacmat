@@ -1,5 +1,6 @@
 import { cartState } from "../state.js";
 import { formatPrice, buildCartWhatsAppUrl } from "../api.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 let drawerEl = null;
 let overlayEl = null;
@@ -116,25 +117,28 @@ function renderDrawerItems() {
       ${items
         .map((item) => {
           const variantText = item.variants && Object.keys(item.variants).length > 0
-            ? Object.entries(item.variants).map(([k, v]) => `${k}: ${v}`).join(" | ")
+            ? Object.entries(item.variants).map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(v)}`).join(" | ")
             : "";
+          const safeName = escapeHtml(item.name);
+          const safeCartId = escapeHtml(item.cartId);
+          const safeImg = sanitizeImageUrl(item.image);
           return `
-            <div class="drawer-item" data-cart-id="${item.cartId}">
-              <img src="${item.image}" alt="${item.name}" class="drawer-item-img" loading="lazy">
+            <div class="drawer-item" data-cart-id="${safeCartId}">
+              <img src="${safeImg}" alt="${safeName}" class="drawer-item-img" loading="lazy">
               <div class="drawer-item-info">
                 <div>
-                  <div class="drawer-item-name">${item.name}</div>
+                  <div class="drawer-item-name">${safeName}</div>
                   ${variantText ? `<div class="drawer-item-variants">${variantText}</div>` : ""}
                 </div>
                 <div class="drawer-item-actions">
                   <div class="drawer-qty-stepper">
-                    <button type="button" class="qty-btn btn-minus" data-cart-id="${item.cartId}" aria-label="Diminuer">-</button>
-                    <span class="qty-display">${item.quantity}</span>
-                    <button type="button" class="qty-btn btn-plus" data-cart-id="${item.cartId}" aria-label="Augmenter">+</button>
+                    <button type="button" class="qty-btn btn-minus" data-cart-id="${safeCartId}" aria-label="Diminuer">-</button>
+                    <span class="qty-display">${Number(item.quantity) || 1}</span>
+                    <button type="button" class="qty-btn btn-plus" data-cart-id="${safeCartId}" aria-label="Augmenter">+</button>
                   </div>
                   <span class="drawer-item-price">${formatPrice(item.price * item.quantity)}$</span>
                 </div>
-                <button type="button" class="drawer-remove-btn" data-cart-id="${item.cartId}">Supprimer</button>
+                <button type="button" class="drawer-remove-btn" data-cart-id="${safeCartId}">Supprimer</button>
               </div>
             </div>
           `;

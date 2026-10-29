@@ -1,9 +1,11 @@
 import { cartState } from "../state.js";
-import { formatPrice, buildProductWhatsAppUrl } from "../api.js";
+import { formatPrice, buildProductWhatsAppUrl, getEffectivePrice } from "../api.js";
 import { showToast } from "./toast.js";
 import { openCartDrawer } from "./cart-drawer.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 let modalOverlay = null;
+let keydownBound = false;
 
 export function openVariantModal(product) {
   if (!modalOverlay) {
@@ -11,6 +13,15 @@ export function openVariantModal(product) {
     modalOverlay.id = "variant-modal-overlay";
     modalOverlay.className = "modal-overlay";
     document.body.appendChild(modalOverlay);
+  }
+  if (!keydownBound) {
+    keydownBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modalOverlay && modalOverlay.classList.contains("is-active")) {
+        modalOverlay.classList.remove("is-active");
+        document.body.classList.remove("scroll-locked");
+      }
+    });
   }
 
   const selectedVariants = {};
@@ -24,6 +35,10 @@ export function openVariantModal(product) {
   }
 
   let quantity = 1;
+  const safeName = escapeHtml(product.name);
+  const safeImg = sanitizeImageUrl(product.images?.[0]);
+  const effectivePrice = getEffectivePrice(product);
+  const hasSale = product.salePrice !== null && product.salePrice !== undefined && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.price);
 
   modalOverlay.innerHTML = `
     <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -39,24 +54,27 @@ export function openVariantModal(product) {
 
       <div class="modal-body">
         <div class="modal-product-preview">
-          <img src="${product.images[0]}" alt="${product.name}" class="modal-product-img">
+          <img src="${safeImg}" alt="${safeName}" class="modal-product-img">
           <div>
-            <h4 class="modal-product-title">${product.name}</h4>
-            <div class="modal-product-price">${formatPrice(product.price)}$</div>
+            <h4 class="modal-product-title">${safeName}</h4>
+            <div class="modal-product-price">
+              ${hasSale ? `<span style="text-decoration:line-through;opacity:0.55;margin-right:0.35rem;">${formatPrice(product.price)}$</span>` : ""}
+              ${formatPrice(effectivePrice)}$
+            </div>
           </div>
         </div>
 
         ${
           product.variants
             ? Object.entries(product.variants)
-                .map(([variantName, values]) => `
+                .map(([variantName, values], idx) => `
                   <div class="variant-group">
-                    <div class="variant-group-label">${variantName} : <span id="label-${variantName}" style="color: var(--color-ink);">${selectedVariants[variantName] || ""}</span></div>
-                    <div class="variant-chips-container" data-variant-name="${variantName}">
+                    <div class="variant-group-label">${escapeHtml(variantName)} : <span data-variant-idx="${idx}" style="color: var(--color-ink);">${escapeHtml(selectedVariants[variantName] || "")}</span></div>
+                    <div class="variant-chips-container" data-variant-name="${escapeHtml(variantName)}" data-variant-idx="${idx}">
                       ${values
                         .map((val) => `
-                          <button type="button" class="variant-chip ${selectedVariants[variantName] === val ? "is-selected" : ""}" data-val="${val}">
-                            ${val}
+                          <button type="button" class="variant-chip ${selectedVariants[variantName] === val ? "is-selected" : ""}" data-val="${escapeHtml(val)}">
+                            ${escapeHtml(val)}
                           </button>
                         `)
                         .join("")}
@@ -105,6 +123,7 @@ export function openVariantModal(product) {
   // Variant chip selections
   modalOverlay.querySelectorAll(".variant-chips-container").forEach((container) => {
     const variantName = container.dataset.variantName;
+    const variantIdx = container.dataset.variantIdx;
     container.querySelectorAll(".variant-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         container.querySelectorAll(".variant-chip").forEach((c) => c.classList.remove("is-selected"));
@@ -112,7 +131,7 @@ export function openVariantModal(product) {
         const val = chip.dataset.val;
         selectedVariants[variantName] = val;
 
-        const labelEl = modalOverlay.querySelector(`#label-${variantName}`);
+        const labelEl = modalOverlay.querySelector(`span[data-variant-idx="${variantIdx}"]`);
         if (labelEl) labelEl.textContent = val;
 
         // Update WhatsApp link

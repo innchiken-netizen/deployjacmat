@@ -3,6 +3,7 @@
  */
 
 import { initAdminLayout, showAdminToast } from "./admin-layout.js";
+import { clearLocalStoreSync } from "../store-sync.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuthorized = await initAdminLayout("settings");
@@ -14,6 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const whatsappInput = document.getElementById("set-whatsapp");
   const emailInput = document.getElementById("set-email");
   const saveBtn = document.getElementById("save-settings-btn");
+  const restoreInput = document.getElementById("restore-backup-input");
 
   // Load current settings
   try {
@@ -62,4 +64,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveBtn.textContent = "Enregistrer les paramètres";
     }
   });
+
+  // Restore backup JSON
+  if (restoreInput) {
+    restoreInput.addEventListener("change", async () => {
+      const file = restoreInput.files && restoreInput.files[0];
+      if (!file) return;
+
+      if (!confirm(`Restaurer la sauvegarde « ${file.name} » ? Cela mettra à jour le catalogue avec les données du fichier.`)) {
+        restoreInput.value = "";
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const res = await fetch("/api/admin/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parsed)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          clearLocalStoreSync();
+          showAdminToast(`Sauvegarde restaurée (${data.productsCount} produits) !`);
+        } else {
+          showAdminToast(data.error || "Fichier de sauvegarde invalide.", "error");
+        }
+      } catch {
+        showAdminToast("Impossible de lire le fichier JSON.", "error");
+      } finally {
+        restoreInput.value = "";
+      }
+    });
+  }
 });

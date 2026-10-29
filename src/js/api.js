@@ -1,12 +1,44 @@
 import { CONFIG } from "./config.js";
 import { applyLocalStoreSync } from "./store-sync.js";
+import { sanitizeImageUrl } from "./utils/sanitize.js";
 
 /**
- * Format image path to always have a leading slash
+ * Format image path to always have a leading slash and safe protocol
  */
 export function formatImageUrl(url) {
-  if (!url) return "";
-  return url.startsWith("/") || url.startsWith("http") ? url : `/${url}`;
+  return sanitizeImageUrl(url, "/logo.png");
+}
+
+/**
+ * Compute effective price (taking salePrice into account when active)
+ */
+export function getEffectivePrice(product) {
+  if (!product) return 0;
+  const basePrice = Number(product.price) || 0;
+  const sale = product.salePrice !== null && product.salePrice !== undefined && product.salePrice !== ""
+    ? Number(product.salePrice)
+    : null;
+  if (sale !== null && Number.isFinite(sale) && sale > 0 && sale < basePrice) {
+    return sale;
+  }
+  return basePrice;
+}
+
+/**
+ * Determine whether a product requires variant selection before adding to cart
+ */
+export function hasProductVariants(product) {
+  if (!product) return false;
+  if (product.isVariable) return true;
+  if (product.variants && typeof product.variants === "object") {
+    return Object.values(product.variants).some((vals) => {
+      if (!Array.isArray(vals) || vals.length === 0) return false;
+      if (vals.length > 1) return true;
+      const single = String(vals[0] || "").trim().toLowerCase();
+      return single !== "unique" && single !== "tu" && single !== "taille unique";
+    });
+  }
+  return false;
 }
 
 /**
@@ -21,20 +53,26 @@ export async function fetchProducts(options = {}) {
         headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
       });
       if (res.ok) {
-        data = await res.json();
+        const parsed = await res.json();
+        if (Array.isArray(parsed)) {
+          data = parsed;
+        }
       }
     } catch {
-      // Fallback to static products.json if API is unavailable
+      // Fallback to static products.json only if API request failed
     }
 
-    if (!data || !Array.isArray(data) || data.length === 0) {
+    if (data === null) {
       const fallbackRes = await fetch(`/products.json?v=${Date.now()}`, { cache: "no-store" });
       if (fallbackRes.ok) {
-        data = await fallbackRes.json();
+        const fallbackParsed = await fallbackRes.json();
+        if (Array.isArray(fallbackParsed)) {
+          data = fallbackParsed;
+        }
       }
     }
 
-    if (!data || !Array.isArray(data)) {
+    if (!Array.isArray(data)) {
       data = [];
     }
 
@@ -43,8 +81,10 @@ export async function fetchProducts(options = {}) {
 
     // Normalize all image paths with leading slash
     data.forEach((p) => {
-      if (Array.isArray(p.images)) {
+      if (Array.isArray(p.images) && p.images.length > 0) {
         p.images = p.images.map(formatImageUrl);
+      } else {
+        p.images = ["/logo.png"];
       }
     });
 
@@ -120,7 +160,8 @@ export function buildProductWhatsAppUrl(product, selectedVariants = {}) {
     .map(([key, val]) => `${key}: ${val}`)
     .join(", ");
   const variantText = variantParts ? ` (${variantParts})` : "";
-  const message = `Bonjour Jacmat Store ! Je souhaite commander : *${product.name}*${variantText} au prix de *${formatPrice(product.price)}$*.\nPouvez-vous me confirmer la disponibilité et la livraison à Kinshasa ?`;
+  const effectivePrice = getEffectivePrice(product);
+  const message = `Bonjour Jacmat Store ! Je souhaite commander : *${product.name}*${variantText} au prix de *${formatPrice(effectivePrice)}$*.\nPouvez-vous me confirmer la disponibilité et la livraison à Kinshasa ?`;
   return `https://api.whatsapp.com/send?phone=${CONFIG.WHATSAPP_PHONE}&text=${encodeURIComponent(message)}`;
 }
 

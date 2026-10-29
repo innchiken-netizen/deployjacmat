@@ -3,6 +3,7 @@
  */
 
 import { initAdminLayout, showAdminToast } from "./admin-layout.js";
+import { escapeHtml } from "../utils/sanitize.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuthorized = await initAdminLayout("categories");
@@ -67,17 +68,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       .map((cat) => {
         const catId = cat.id || cat.slug;
         const linkedCount = products.filter((p) => p.category === catId || p.category === cat.slug).length;
+        const safeName = escapeHtml(cat.name);
+        const safeSlug = escapeHtml(cat.slug);
+        const safeDesc = escapeHtml(cat.description || "—");
+        const safeId = escapeHtml(catId);
 
         return `
           <tr>
             <td>
-              <strong style="color: var(--admin-text-main); font-size: 14px;">${cat.name}</strong>
+              <strong style="color: var(--admin-text-main); font-size: 14px;">${safeName}</strong>
             </td>
             <td>
-              <code style="background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${cat.slug}</code>
+              <code style="background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${safeSlug}</code>
             </td>
             <td style="color: var(--admin-text-muted); font-size: 13px;">
-              ${cat.description || "—"}
+              ${safeDesc}
             </td>
             <td>
               <span class="admin-badge admin-badge-published">
@@ -85,7 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               </span>
             </td>
             <td style="text-align: right;">
-              <button type="button" class="admin-btn admin-btn-danger admin-btn-sm delete-cat-btn" data-id="${catId}" data-count="${linkedCount}" data-name="${cat.name.replace(/"/g, "&quot;")}">
+              <button type="button" class="admin-btn admin-btn-danger admin-btn-sm delete-cat-btn" data-id="${safeId}" data-count="${linkedCount}" data-name="${safeName}">
                 Supprimer
               </button>
             </td>

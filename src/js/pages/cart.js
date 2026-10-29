@@ -2,6 +2,7 @@ import { cartState } from "../state.js";
 import { formatPrice, buildCartWhatsAppUrl } from "../api.js";
 import { CONFIG } from "../config.js";
 import { showToast } from "../components/toast.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 export function initCartPage() {
   const itemsContainer = document.getElementById("cart-page-items");
@@ -58,26 +59,29 @@ export function initCartPage() {
           ${items
             .map((item) => {
               const variantText = item.variants && Object.keys(item.variants).length > 0
-                ? Object.entries(item.variants).map(([k, v]) => `${k}: ${v}`).join(" | ")
+                ? Object.entries(item.variants).map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(v)}`).join(" | ")
                 : "";
+              const safeName = escapeHtml(item.name);
+              const safeCartId = escapeHtml(item.cartId);
+              const safeImg = sanitizeImageUrl(item.image);
               return `
-                <div class="cart-table-row" data-cart-id="${item.cartId}">
-                  <img src="${item.image}" alt="${item.name}" class="cart-row-img" loading="lazy">
+                <div class="cart-table-row" data-cart-id="${safeCartId}">
+                  <img src="${safeImg}" alt="${safeName}" class="cart-row-img" loading="lazy">
                   <div class="cart-row-details">
-                    <h3 class="cart-row-name">${item.name}</h3>
+                    <h3 class="cart-row-name">${safeName}</h3>
                     ${variantText ? `<div class="cart-row-variants">${variantText}</div>` : ""}
                     <div class="cart-row-price">${formatPrice(item.price)}$</div>
                   </div>
                   <div class="cart-row-actions">
                     <div class="drawer-qty-stepper">
-                      <button type="button" class="qty-btn btn-cart-minus" data-cart-id="${item.cartId}" aria-label="Diminuer">-</button>
-                      <span class="qty-display">${item.quantity}</span>
-                      <button type="button" class="qty-btn btn-cart-plus" data-cart-id="${item.cartId}" aria-label="Augmenter">+</button>
+                      <button type="button" class="qty-btn btn-cart-minus" data-cart-id="${safeCartId}" aria-label="Diminuer">-</button>
+                      <span class="qty-display">${Number(item.quantity) || 1}</span>
+                      <button type="button" class="qty-btn btn-cart-plus" data-cart-id="${safeCartId}" aria-label="Augmenter">+</button>
                     </div>
                     <span style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-sm);">
                       ${formatPrice(item.price * item.quantity)}$
                     </span>
-                    <button type="button" class="drawer-remove-btn btn-cart-remove" data-cart-id="${item.cartId}">Retirer</button>
+                    <button type="button" class="drawer-remove-btn btn-cart-remove" data-cart-id="${safeCartId}">Retirer</button>
                   </div>
                 </div>
               `;

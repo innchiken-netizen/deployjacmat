@@ -3,6 +3,8 @@
  */
 
 import { initAdminLayout, showAdminToast } from "./admin-layout.js";
+import { saveStatusOverride, applyLocalStoreSync } from "../store-sync.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuthorized = await initAdminLayout("dashboard");
@@ -34,7 +36,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const prodRes = await fetch("/api/admin/products");
     if (prodRes.ok) {
-      const products = await prodRes.json();
+      const fetched = await prodRes.json();
+      const products = applyLocalStoreSync(fetched);
       const recent = products.slice(0, 6);
 
       if (recent.length === 0) {
@@ -50,21 +53,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       recentTableBody.innerHTML = recent
         .map((p) => {
-          const imgUrl = p.images && p.images[0] ? p.images[0] : "/placeholder.png";
+          const imgUrl = sanitizeImageUrl(p.images && p.images[0] ? p.images[0] : "/placeholder.png");
           const isPublished = p.status === "published";
           const isSoldOut = Boolean(p.soldOut);
+          const safeName = escapeHtml(p.name);
+          const safeSlug = escapeHtml(p.slug);
+          const safeCategory = escapeHtml(p.category || "Tops");
+          const safeId = escapeHtml(p.id);
+          const safeStatus = escapeHtml(p.status);
 
           return `
             <tr>
               <td>
-                <img src="${imgUrl}" alt="${p.name}" class="admin-product-thumb" loading="lazy">
+                <img src="${imgUrl}" alt="${safeName}" class="admin-product-thumb" loading="lazy">
               </td>
               <td>
-                <strong style="color: var(--admin-text-main);">${p.name}</strong>
-                <div style="font-size: 11.5px; color: var(--admin-text-muted);">${p.slug}</div>
+                <strong style="color: var(--admin-text-main);">${safeName}</strong>
+                <div style="font-size: 11.5px; color: var(--admin-text-muted);">${safeSlug}</div>
               </td>
               <td>
-                <span style="text-transform: capitalize; font-weight: 500;">${p.category || "Tops"}</span>
+                <span style="text-transform: capitalize; font-weight: 500;">${safeCategory}</span>
               </td>
               <td>
                 <strong>${Number(p.price).toFixed(2).replace(/\.?0+$/, "")}$</strong>
@@ -82,10 +90,10 @@ document.addEventListener("DOMContentLoaded", async () => {
               </td>
               <td style="text-align: right;">
                 <div style="display: inline-flex; gap: 8px;">
-                  <a href="/admin/products/edit?id=${p.id}" class="admin-btn admin-btn-secondary admin-btn-sm">
+                  <a href="/admin/products/edit?id=${encodeURIComponent(p.id)}" class="admin-btn admin-btn-secondary admin-btn-sm">
                     Modifier
                   </a>
-                  <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm toggle-status-btn" data-id="${p.id}" data-current="${p.status}">
+                  <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm toggle-status-btn" data-id="${safeId}" data-current="${safeStatus}">
                     ${isPublished ? "Masquer" : "Publier"}
                   </button>
                 </div>
@@ -101,6 +109,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           const id = btn.dataset.id;
           const current = btn.dataset.current;
           const newStatus = current === "published" ? "draft" : "published";
+
+          saveStatusOverride(id, newStatus);
 
           try {
             const updateRes = await fetch("/api/admin/products", {

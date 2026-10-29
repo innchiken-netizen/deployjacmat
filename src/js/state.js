@@ -55,14 +55,23 @@ class CartState {
     const cartId = this.generateKey(product.name, variants);
     const existingIndex = this.items.findIndex((item) => item.cartId === cartId);
 
+    const basePrice = Number(product.price) || 0;
+    const salePrice = product.salePrice !== null && product.salePrice !== undefined && product.salePrice !== ""
+      ? Number(product.salePrice)
+      : null;
+    const effectivePrice = salePrice !== null && Number.isFinite(salePrice) && salePrice > 0 && salePrice < basePrice
+      ? salePrice
+      : basePrice;
+
     if (existingIndex > -1) {
       this.items[existingIndex].quantity += qty;
+      this.items[existingIndex].price = effectivePrice;
     } else {
       this.items.push({
         cartId,
-        name: product.name,
-        price: Number(product.price) || 0,
-        image: product.images[0],
+        name: String(product.name || ""),
+        price: effectivePrice,
+        image: Array.isArray(product.images) && product.images[0] ? product.images[0] : "/logo.png",
         variants: { ...variants },
         quantity: qty,
         preOrder: Boolean(product.preOrder)

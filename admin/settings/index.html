@@ -107,6 +107,23 @@
                 </div>
               </div>
             </div>
+
+            <!-- Backup & Restore Card -->
+            <div class="admin-form-card">
+              <h3 style="font-size: 16px; font-weight: 700;">Sauvegarde & Restauration</h3>
+              <p class="admin-help-text">Exportez ou restaurez l'intégralité du catalogue et des paramètres au format JSON.</p>
+
+              <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+                <a href="/api/admin/backup" class="admin-btn admin-btn-secondary" style="justify-content: center; text-decoration: none;" download>
+                  Télécharger une sauvegarde (.json)
+                </a>
+
+                <label class="admin-btn admin-btn-secondary" style="justify-content: center; cursor: pointer; margin: 0;">
+                  <span>Importer une sauvegarde (.json)</span>
+                  <input type="file" id="restore-backup-input" accept=".json,application/json" style="display: none;">
+                </label>
+              </div>
+            </div>
           </div>
 
         </div>

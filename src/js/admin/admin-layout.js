@@ -2,6 +2,7 @@
  * JACMAT STORE — Admin Shared Layout & Session Guard
  * Automatically verifies session and builds responsive navigation shell.
  */
+import { escapeHtml } from "../utils/sanitize.js";
 
 let currentAdminEmail = "";
 
@@ -28,7 +29,7 @@ export function showAdminToast(message, type = "success") {
         : '<path d="M20 6L9 17l-5-5"></path>'
       }
     </svg>
-    <span>${message}</span>
+    <span>${escapeHtml(message)}</span>
   `;
 
   container.appendChild(toast);
@@ -137,11 +138,11 @@ export async function initAdminLayout(activePageKey = "dashboard") {
       <div class="admin-sidebar-footer">
         <div class="admin-user-pill">
           <div class="admin-user-avatar">
-            ${currentAdminEmail.charAt(0).toUpperCase()}
+            ${escapeHtml(currentAdminEmail.charAt(0).toUpperCase())}
           </div>
           <div class="admin-user-info">
             <div class="admin-user-role">Propriétaire</div>
-            <div class="admin-user-email" title="${currentAdminEmail}">${currentAdminEmail}</div>
+            <div class="admin-user-email" title="${escapeHtml(currentAdminEmail)}">${escapeHtml(currentAdminEmail)}</div>
           </div>
         </div>
 

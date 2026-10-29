@@ -4,6 +4,7 @@
 
 import { initAdminLayout, showAdminToast } from "./admin-layout.js";
 import { saveStatusOverride, saveDeletedProductId, applyLocalStoreSync } from "../store-sync.js";
+import { escapeHtml, sanitizeImageUrl } from "../utils/sanitize.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuthorized = await initAdminLayout("products");
@@ -101,27 +102,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Render Desktop Rows
     tableBody.innerHTML = filtered
       .map((p) => {
-        const imgUrl = p.images && p.images[0] ? p.images[0] : "/placeholder.png";
+        const imgUrl = sanitizeImageUrl(p.images && p.images[0] ? p.images[0] : "/placeholder.png");
         const isPublished = p.status === "published";
         const isSoldOut = Boolean(p.soldOut);
         const priceDisplay = Number(p.price).toFixed(2).replace(/\.?0+$/, "");
+        const safeName = escapeHtml(p.name);
+        const safeSlug = escapeHtml(p.slug);
+        const safeSku = escapeHtml(p.sku);
+        const safeCategory = escapeHtml(p.category || "Tops");
+        const safeId = escapeHtml(p.id);
+        const safeStatus = escapeHtml(p.status);
         const skuBadge = p.sku
-          ? `<span style="display: inline-block; font-family: monospace; font-size: 11px; background: #f4f4f5; color: #18181b; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 6px;">${p.sku}</span>`
+          ? `<span style="display: inline-block; font-family: monospace; font-size: 11px; background: #f4f4f5; color: #18181b; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 6px;">${safeSku}</span>`
           : "";
 
         return `
           <tr>
             <td>
-              <img src="${imgUrl}" alt="${p.name}" class="admin-product-thumb" loading="lazy">
+              <img src="${imgUrl}" alt="${safeName}" class="admin-product-thumb" loading="lazy">
             </td>
             <td>
-              <strong style="color: var(--admin-text-main); font-size: 14px;">${p.name}</strong>
+              <strong style="color: var(--admin-text-main); font-size: 14px;">${safeName}</strong>
               <div style="font-size: 11.5px; color: var(--admin-text-muted); margin-top: 2px;">
-                ${skuBadge}${p.slug}
+                ${skuBadge}${safeSlug}
               </div>
             </td>
             <td>
-              <span style="text-transform: capitalize; font-weight: 500;">${p.category || "Tops"}</span>
+              <span style="text-transform: capitalize; font-weight: 500;">${safeCategory}</span>
             </td>
             <td>
               <strong>${priceDisplay}$</strong>
@@ -139,13 +146,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             </td>
             <td style="text-align: right;">
               <div style="display: inline-flex; gap: 6px;">
-                <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm toggle-status-btn" data-id="${p.id}" data-current="${p.status}">
+                <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm toggle-status-btn" data-id="${safeId}" data-current="${safeStatus}">
                   ${isPublished ? "Masquer" : "Publier"}
                 </button>
-                <a href="/admin/products/edit?id=${p.id}" class="admin-btn admin-btn-secondary admin-btn-sm">
+                <a href="/admin/products/edit?id=${encodeURIComponent(p.id)}" class="admin-btn admin-btn-secondary admin-btn-sm">
                   Modifier
                 </a>
-                <button type="button" class="admin-btn admin-btn-danger admin-btn-sm delete-product-btn" data-id="${p.id}" data-name="${p.name.replace(/"/g, "&quot;")}">
+                <button type="button" class="admin-btn admin-btn-danger admin-btn-sm delete-product-btn" data-id="${safeId}" data-name="${safeName}">
                   Supprimer
                 </button>
               </div>
@@ -158,32 +165,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Render Mobile Cards
     mobileCards.innerHTML = filtered
       .map((p) => {
-        const imgUrl = p.images && p.images[0] ? p.images[0] : "/placeholder.png";
+        const imgUrl = sanitizeImageUrl(p.images && p.images[0] ? p.images[0] : "/placeholder.png");
         const isPublished = p.status === "published";
         const priceDisplay = Number(p.price).toFixed(2).replace(/\.?0+$/, "");
+        const safeName = escapeHtml(p.name);
+        const safeSku = escapeHtml(p.sku);
+        const safeCategory = escapeHtml(p.category || "Tops");
+        const safeId = escapeHtml(p.id);
+        const safeStatus = escapeHtml(p.status);
         const skuBadge = p.sku
-          ? `<span style="font-family: monospace; font-size: 11px; font-weight: 700; background: #f4f4f5; padding: 1px 5px; border-radius: 3px; color: #18181b;">${p.sku}</span> • `
+          ? `<span style="font-family: monospace; font-size: 11px; font-weight: 700; background: #f4f4f5; padding: 1px 5px; border-radius: 3px; color: #18181b;">${safeSku}</span> • `
           : "";
 
         return `
           <div class="admin-mobile-product-card">
-            <img src="${imgUrl}" alt="${p.name}">
+            <img src="${imgUrl}" alt="${safeName}">
             <div class="admin-mobile-product-details">
-              <div class="admin-mobile-product-title">${p.name}</div>
+              <div class="admin-mobile-product-title">${safeName}</div>
               <div class="admin-mobile-product-meta">
-                ${skuBadge}${priceDisplay}$ • ${p.category} • 
+                ${skuBadge}${priceDisplay}$ • ${safeCategory} •
                 <span class="admin-badge ${isPublished ? "admin-badge-published" : "admin-badge-draft"}" style="padding: 1px 6px;">
                   ${isPublished ? "Publié" : "Brouillon"}
                 </span>
               </div>
               <div class="admin-mobile-actions">
-                <a href="/admin/products/edit?id=${p.id}" class="admin-btn admin-btn-secondary admin-btn-sm" style="flex: 1;">
+                <a href="/admin/products/edit?id=${encodeURIComponent(p.id)}" class="admin-btn admin-btn-secondary admin-btn-sm" style="flex: 1;">
                   Modifier
                 </a>
-                <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm toggle-status-btn" data-id="${p.id}" data-current="${p.status}">
+                <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm toggle-status-btn" data-id="${safeId}" data-current="${safeStatus}">
                   ${isPublished ? "Masquer" : "Publier"}
                 </button>
-                <button type="button" class="admin-btn admin-btn-danger admin-btn-sm delete-product-btn" data-id="${p.id}" data-name="${p.name.replace(/"/g, "&quot;")}">
+                <button type="button" class="admin-btn admin-btn-danger admin-btn-sm delete-product-btn" data-id="${safeId}" data-name="${safeName}">
                   Suppr.
                 </button>
               </div>
@@ -233,9 +245,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Modal Cancel
-  cancelDeleteBtn.addEventListener("click", () => {
+  const closeDeleteModal = () => {
     deleteModal.classList.remove("is-open");
     productToDelete = null;
+  };
+  cancelDeleteBtn.addEventListener("click", closeDeleteModal);
+  deleteModal.addEventListener("click", (e) => {
+    if (e.target === deleteModal) closeDeleteModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && deleteModal.classList.contains("is-open")) {
+      closeDeleteModal();
+    }
   });
 
   // Modal Confirm Delete

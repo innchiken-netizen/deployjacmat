@@ -1,6 +1,8 @@
 /**
  * JACMAT STORE — Toast Notification Component
  */
+import { escapeHtml } from "../utils/sanitize.js";
+
 let toastContainer = null;
 
 function ensureToastContainer() {
@@ -25,7 +27,7 @@ export function showToast(message, duration = 3200) {
     <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
-    <span>${message}</span>
+    <span>${escapeHtml(message)}</span>
   `;
 
   container.appendChild(toast);

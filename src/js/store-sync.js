@@ -100,35 +100,75 @@ export function applyLocalStoreSync(rawProducts = []) {
   const deleted = new Set(getDeletedProductIds());
 
   // 1. Filter out deleted
-  let list = rawProducts.filter((p) => {
-    const id = p.id || p.slug || p.name;
-    return !deleted.has(id) && !deleted.has(p.id) && !deleted.has(p.slug);
+  let list = rawProducts
+    .filter((p) => {
+      const id = p.id || p.slug || p.name;
+      return !deleted.has(id) && !deleted.has(p.id) && !deleted.has(p.slug);
+    })
+    .map((p) => ({ ...p }));
+
+  // 2. Reconcile created / edited products with list
+  const createdById = new Map();
+  created.forEach((cp) => {
+    if (!cp || typeof cp !== "object") return;
+    const id = cp.id || cp.slug;
+    if (id && !deleted.has(id) && !deleted.has(cp.slug)) {
+      createdById.set(id, cp);
+      if (cp.slug) createdById.set(cp.slug, cp);
+    }
   });
 
-  // 2. Apply status and property overrides
+  const matchedCreatedIds = new Set();
+  list = list.map((p) => {
+    const id = p.id || p.slug;
+    const localEdit = createdById.get(id) || (p.slug ? createdById.get(p.slug) : null);
+    if (localEdit) {
+      matchedCreatedIds.add(localEdit.id || localEdit.slug);
+      if (localEdit.slug) matchedCreatedIds.add(localEdit.slug);
+      const serverTs = new Date(p.updatedAt || p.createdAt || 0).getTime();
+      const localTs = new Date(localEdit.updatedAt || localEdit.createdAt || 0).getTime();
+      if (!serverTs || localTs >= serverTs) {
+        return { ...p, ...localEdit };
+      }
+    }
+    return p;
+  });
+
+  // 3. Prepend newly created products not yet in server list
+  created.forEach((cp) => {
+    const id = cp.id || cp.slug;
+    if (id && !matchedCreatedIds.has(id) && !matchedCreatedIds.has(cp.slug) && !deleted.has(id)) {
+      matchedCreatedIds.add(id);
+      list.unshift({ ...cp });
+    }
+  });
+
+  // 4. Apply explicit status overrides last
   list.forEach((p) => {
     const id = p.id || p.slug;
     const nameKey = p.name;
-    if (overrides[id] !== undefined) {
+    if (id && overrides[id] !== undefined) {
       p.status = overrides[id];
-    } else if (overrides[nameKey] !== undefined) {
+    } else if (p.slug && overrides[p.slug] !== undefined) {
+      p.status = overrides[p.slug];
+    } else if (nameKey && overrides[nameKey] !== undefined) {
       p.status = overrides[nameKey];
     }
   });
 
-  // 3. Prepend newly created products if not already in list
-  const existingIds = new Set(list.map((p) => p.id || p.slug));
-  created.forEach((cp) => {
-    const id = cp.id || cp.slug;
-    if (!existingIds.has(id)) {
-      // Also apply status override to created piece if any
-      if (overrides[id] !== undefined) cp.status = overrides[id];
-      existingIds.add(id);
-      list.unshift(cp);
-    }
-  });
-
   return list;
+}
+
+/**
+ * Clear local sync overrides (e.g. after full backup restore)
+ */
+export function clearLocalStoreSync() {
+  try {
+    localStorage.removeItem(STORAGE_KEY_OVERRIDES);
+    localStorage.removeItem(STORAGE_KEY_NEW_PRODS);
+    localStorage.removeItem(STORAGE_KEY_DELETED);
+    localStorage.setItem(STORAGE_KEY_VERSION, String(Date.now()));
+  } catch {}
 }
 
 /**
