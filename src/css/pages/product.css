@@ -48,11 +48,12 @@
 .product-gallery-main {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
-  background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  aspect-ratio: 4 / 5;
+  background: #f4f3ef;
+  border: 1px solid rgba(24, 24, 27, 0.08);
+  border-radius: 22px;
   overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
 }
 
 .gallery-main-img {
@@ -83,12 +84,12 @@
 .gallery-thumb-btn {
   width: 72px;
   height: 72px;
-  border-radius: var(--radius-xs);
-  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  border: 2px solid rgba(24, 24, 27, 0.1);
   background: var(--color-white);
   overflow: hidden;
   flex-shrink: 0;
-  transition: border-color var(--duration-fast);
+  transition: border-color var(--duration-fast), transform 0.2s;
 }
 
 @media (min-width: 768px) {
@@ -99,11 +100,13 @@
 }
 
 .gallery-thumb-btn:hover {
-  border-color: var(--color-muted);
+  border-color: #09090b;
+  transform: scale(1.03);
 }
 
 .gallery-thumb-btn.is-active {
-  border-color: var(--color-obsidian);
+  border-color: #09090b;
+  box-shadow: 0 0 0 2px #09090b;
 }
 
 .gallery-thumb-btn img {
@@ -130,15 +133,17 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(24, 24, 27, 0.08);
   padding-bottom: 20px;
 }
 
 .product-page-title {
-  font-size: var(--text-3xl);
-  font-weight: 900;
-  color: var(--color-ink);
-  line-height: 1.1;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.4vw, 2.85rem);
+  font-weight: 800;
+  color: #09090b;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
   word-break: break-word;
   overflow-wrap: break-word;
 }
@@ -151,9 +156,10 @@
 
 .product-page-price {
   font-family: var(--font-display);
-  font-size: var(--text-3xl);
-  font-weight: 900;
-  color: var(--color-ink);
+  font-size: clamp(1.8rem, 2.6vw, 2.4rem);
+  font-weight: 800;
+  color: #09090b;
+  letter-spacing: -0.02em;
 }
 
 /* Variants Selection */

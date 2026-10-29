@@ -28,9 +28,10 @@
   --color-whatsapp-hover: #1ebc57;
   --color-whatsapp-dark: #128c7e;
   
-  /* Typography: Inter (Preserved from previous site) */
-  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Typography: Plus Jakarta Sans & Instrument Serif (Lovable & Shopify Flagship) */
+  --font-display: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
   
   /* Type Scale */
   --text-xs: clamp(0.7rem, 0.75vw, 0.75rem);

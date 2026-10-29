@@ -363,12 +363,11 @@
   gap: 10px;
   height: 48px;
   padding: 0 24px;
-  border-radius: var(--radius-sm);
+  border-radius: 9999px;
   font-family: var(--font-display);
   font-size: var(--text-sm);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   max-width: 100%;
   transition: all var(--duration-fast) var(--ease-out);
@@ -500,24 +499,24 @@
   display: flex;
   flex-direction: column;
   background: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1px solid rgba(24, 24, 27, 0.08);
+  border-radius: 18px;
   overflow: hidden;
   position: relative;
   transition: transform var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
 }
 
 .product-card:hover {
-  border-color: var(--color-obsidian);
+  border-color: #09090b;
   transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 16px 36px -10px rgba(9, 9, 11, 0.16);
 }
 
 .product-media {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
-  background-color: #f6f6f4;
+  aspect-ratio: 4 / 5;
+  background-color: #f5f4f0;
   overflow: hidden;
 }
 
@@ -564,13 +563,15 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
-  border-radius: var(--radius-xs);
+  padding: 5px 12px;
+  border-radius: 9999px;
   font-family: var(--font-display);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .badge-drop {
@@ -644,24 +645,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: var(--radius-xs);
-  background: var(--color-canvas);
-  border: 1px solid var(--color-border);
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  background: #09090b;
+  border: 1px solid #09090b;
   font-family: var(--font-display);
-  font-size: var(--text-xs);
+  font-size: 0.74rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-ink);
+  letter-spacing: 0.02em;
+  color: #ffffff;
   transition: all var(--duration-fast) var(--ease-out);
 }
 
 .product-quick-btn:hover {
-  background: var(--color-obsidian);
-  color: var(--color-white);
-  border-color: var(--color-obsidian);
+  background: #27272a;
+  border-color: #27272a;
+  transform: translateY(-1px);
 }
 
 .product-card.is-sold-out .product-quick-btn {

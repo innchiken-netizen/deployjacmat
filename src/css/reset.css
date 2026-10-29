@@ -75,6 +75,14 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-ink);
 }
 
+.serif-italic {
+  font-family: var(--font-serif, "Instrument Serif", Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  padding-right: 0.05em;
+}
+
 ::selection {
   background: var(--color-obsidian);
   color: var(--color-white);

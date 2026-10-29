@@ -8,14 +8,23 @@
 
 .cart-page-header {
   margin-bottom: clamp(24px, 4vw, 40px);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(24, 24, 27, 0.08);
   padding-bottom: 20px;
 }
 
 .cart-page-title {
-  font-size: var(--text-4xl);
-  font-weight: 900;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4.4vw, 3.4rem);
+  font-weight: 800;
+  color: #09090b;
+  letter-spacing: -0.03em;
+  text-transform: none;
+}
+
+.cart-page-title .serif-italic {
+  font-size: 1.12em;
+  font-weight: 400;
+  color: #18181b;
 }
 
 .cart-page-grid {
