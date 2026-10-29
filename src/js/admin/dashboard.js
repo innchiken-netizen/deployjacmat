@@ -109,14 +109,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           const id = btn.dataset.id;
           const current = btn.dataset.current;
           const newStatus = current === "published" ? "draft" : "published";
+          const item = products.find((p) => p.id === id || p.slug === id);
 
           saveStatusOverride(id, newStatus);
+          if (item && item.slug) saveStatusOverride(item.slug, newStatus);
 
           try {
             const updateRes = await fetch("/api/admin/products", {
               method: "PUT",
+              keepalive: true,
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id, status: newStatus })
+              body: JSON.stringify({ ...(item || {}), id, status: newStatus })
             });
 
             if (updateRes.ok) {

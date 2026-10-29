@@ -217,17 +217,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         const current = btn.dataset.current;
         const newStatus = current === "published" ? "draft" : "published";
 
-        saveStatusOverride(id, newStatus);
         const item = allProducts.find((p) => p.id === id || p.slug === id);
+        saveStatusOverride(id, newStatus);
+        if (item && item.slug) saveStatusOverride(item.slug, newStatus);
         if (item) item.status = newStatus;
         renderFilteredProducts();
-        showAdminToast(`Produit ${newStatus === "published" ? "publié" : "passé en brouillon"}`);
 
-        fetch("/api/admin/products", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, status: newStatus })
-        }).catch(() => {});
+        try {
+          const res = await fetch("/api/admin/products", {
+            method: "PUT",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...(item || {}), id, status: newStatus })
+          });
+          if (res.ok) {
+            showAdminToast(`Produit ${newStatus === "published" ? "publié sur la boutique" : "masqué de la boutique"}`);
+          } else {
+            showAdminToast("Attention : synchronisation serveur incomplète", "error");
+          }
+        } catch {
+          showAdminToast("Produit mis à jour localement (hors-ligne)", "error");
+        }
       });
     });
 
@@ -266,15 +276,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     confirmDeleteBtn.disabled = true;
     confirmDeleteBtn.textContent = "Suppression...";
 
-    saveDeletedProductId(productToDelete.id);
-    allProducts = allProducts.filter((p) => p.id !== productToDelete.id && p.slug !== productToDelete.id);
+    const targetId = productToDelete.id;
+    const targetName = productToDelete.name;
+    const targetItem = allProducts.find((p) => p.id === targetId || p.slug === targetId);
+
+    saveDeletedProductId(targetId);
+    if (targetItem && targetItem.slug) saveDeletedProductId(targetItem.slug);
+
+    allProducts = allProducts.filter((p) => p.id !== targetId && p.slug !== targetId);
     deleteModal.classList.remove("is-open");
     renderFilteredProducts();
-    showAdminToast(`Le produit « ${productToDelete.name} » a été supprimé`);
 
-    fetch(`/api/admin/products?id=${encodeURIComponent(productToDelete.id)}`, {
-      method: "DELETE"
-    }).catch(() => {});
+    try {
+      await fetch(`/api/admin/products?id=${encodeURIComponent(targetId)}`, {
+        method: "DELETE",
+        keepalive: true
+      });
+      showAdminToast(`Le produit « ${targetName} » a été supprimé`);
+    } catch {
+      showAdminToast(`Le produit « ${targetName} » a été supprimé localement`);
+    }
 
     confirmDeleteBtn.disabled = false;
     confirmDeleteBtn.textContent = "Supprimer définitivement";
